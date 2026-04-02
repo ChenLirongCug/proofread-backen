@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofRead 后端 API 测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .status.ok {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .info-box strong {
+            color: #667eea;
+        }
+        
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+        
+        .log-entry.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .log-entry.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 ProofRead 后端 API 测试</h1>
+        <p style="color: #666; margin-bottom: 20px;">快速测试前后端联调</p>
+        
+        <div id="server-status" class="status error">
+            ❌ 服务器未连接 - 请启动后端服务器
+        </div>
+        
+        <!-- 注册 -->
+        <div class="section">
+            <h2>1️⃣ 注册新用户</h2>
+            <div class="form-group">
+                <label>账号</label>
+                <input type="text" id="reg-account" placeholder="请输入邮箱或用户名" value="test@example.com">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="reg-password" placeholder="请输入密码" value="password123">
+            </div>
+            <button onclick="testRegister()">注册</button>
+            <div id="reg-result" class="info-box" style="display:none;"></div>
+        </div>
+        
+        <!-- 登录 -->
+        <div class="section">
+            <h2>2️⃣            localStorage.getItem("proofread_logged_in")            localStorage.getItem("proofread_logged_in") 登录</h2>
+            <div class="form-group">
+                <label>账号</label>
+                <input type="text" id="login-account" placeholder="请输入账号" value="test@example.com">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="login-password" placeholder="请输入密码" value="password123">
+            </div>
+            <button onclick="testLogin()">登录</button>
+            <div id="login-result" class="info-box" style="display:none;"></div>
+        </div>
+        
+        <!-- 查询余额 -->
+        <div class="section">
+            <h2>3️⃣ 查询 Token 余额</h2>
+            <p style="font-size: 14px; color: #666; margin-bottom: 10px;">需要先登录</p>
+            <button onclick="testGetBalance()">查询余额</button>
+            <div id="balance-result" class="info-box" style="display:none;"></div>
+        </div>
+        
+        <!-- 扣减 Token -->
+        <div class="section">
+            <h2>4️⃣ 扣减 Token（模拟审校）</h2>
+            <div class="form-group">
+                <label>扣减数量</label>
+                <input type="number" id="deduct-amount" placeholder="请输入扣减的 Token 数量" value="1000">
+            </div>
+            <button onclick="testDeduct()">扣减 Token</button>
+            <div id="deduct-result" class="info-box" style="display:none;"></div>
+        </div>
+        
+        <!-- 创建订单 -->
+        <div class="section">
+            <h2>5️⃣ 创建充值订单</h2>
+            <div class="form-group">
+                <label>充值金额（元）</label>
+                <input type="number" id="order-amount" placeholder="请输入充值金额" value="50">
+            </div>
+            <button onclick="testCreateOrder()">创建订单</button>
+            <div id="order-result" class="info-box" style="display:none;"></div>
+        </div>
+        
+        <!-- 模拟支付 -->
+        <div class="section">
+            <h2>6️⃣ 模拟支付</h2>
+            <div class="form-group">
+                <label>订单号</label>
+                <input type="text" id="pay-order-number" placeholder="请输入订单号">
+            </div>
+            <button onclick="testMockPay()">模拟支付</button>
+            <div id="pay-result" class="info-box" style="display:none;"></div>
+        </div>
+        
+        <!-- 日志 -->
+        <div class="section">
+            <h2>📋 操作日志</h2>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let authToken = '';
+        
+        // 日志记录
+        function log(message, isError = false) {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${isError ? 'error' : 'success'}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+        
+        // 检查服务器状态
+        async function checkServer() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    document.getElementById('server-status').className = 'status ok';
+                    document.getElementById('server-status').textContent = '✅ 服务器连接正常 - ' + data.timestamp;
+                    log('服务器连接成功');
+                    return true;
+                }
+            } catch (error) {
+                document.getElementById('server-status').className = 'status error';
+                document.getElementById('server-status').textContent = '❌ 服务器未连接 - ' + error.message;
+                log('服务器连接失败: ' + error.message, true);
+                return false;
+            }
+        }
+        
+        // 注册
+        async function testRegister() {
+            const account = document.getElementById('reg-account').value;
+            const password = document.getElementById('reg-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account, password })
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('reg-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.code === 0) {
+                    authToken = data.data.token;
+                    resultDiv.innerHTML = `
+                        <strong>✅ 注册成功！</strong><br>
+                        用户 ID: ${data.data.userId}<br>
+                        Token 余额: ${data.data.tokenBalance}<br>
+                        Token: ${data.data.token.substring(0, 30)}...
+                    `;
+                    log(`注册成功: ${account}, Token余额: ${data.data.tokenBalance}`);
+                } else {
+                    resultDiv.innerHTML = `<strong>❌ 注册失败：</strong>${data.message}`;
+                    log(`注册失败: ${data.message}`, true);
+                }
+            } catch (error) {
+                log(`注册错误: ${error.message}`, true);
+            }
+        }
+        
+        // 登录
+        async function testLogin() {
+            const account = document.getElementById('login-account').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account, password })
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('login-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.code === 0) {
+                    authToken = data.data.token;
+                    resultDiv.innerHTML = `
+                        <strong>✅ 登录成功！</strong><br>
+                        用户 ID: ${data.data.userId}<br>
+                        Token 余额: ${data.data.tokenBalance}<br>
+                        Token: ${data.data.token.substring(0, 30)}...
+                    `;
+                    log(`登录成功: ${account}, Token余额: ${data.data.tokenBalance}`);
+                } else {
+                    resultDiv.innerHTML = `<strong>❌ 登录失败：</strong>${data.message}`;
+                    log(`登录失败: ${data.message}`, true);
+                }
+            } catch (error) {
+                log(`登录错误: ${error.message}`, true);
+            }
+        }
+        
+        // 查询余额
+        async function testGetBalance() {
+            if (!authToken) {
+                alert('请先登录！');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/token/balance`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('balance-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.code === 0) {
+                    resultDiv.innerHTML = `
+                        <strong>✅ 查询成功！</strong><br>
+                        可用余额: ${data.data.availableBalance}<br>
+                        总消费: ${data.data.totalUsed}<br>
+                        总充值: ${data.data.totalRecharged}
+                    `;
+                    log(`查询余额成功: ${data.data.availableBalance}`);
+                } else {
+                    resultDiv.innerHTML = `<strong>❌ 查询失败：</strong>${data.message}`;
+                    log(`查询余额失败: ${data.message}`, true);
+                }
+            } catch (error) {
+                log(`查询错误: ${error.message}`, true);
+            }
+        }
+        
+        // 扣减 Token
+        async function testDeduct() {
+            if (!authToken) {
+                alert('请先登录！');
+                return;
+            }
+            
+            const amount = parseInt(document.getElementById('deduct-amount').value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/token/deduct`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount })
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('deduct-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.code === 0) {
+                    resultDiv.innerHTML = `
+                        <strong>✅ 扣减成功！</strong><br>
+                        扣减数量: ${amount}<br>
+                        剩余余额: ${data.data.remainingBalance}
+                    `;
+                    log(`扣减成功: -${amount}, 剩余: ${data.data.remainingBalance}`);
+                } else {
+                    resultDiv.innerHTML = `<strong>❌ 扣减失败：</strong>${data.message}`;
+                    log(`扣减失败: ${data.message}`, true);
+                }
+            } catch (error) {
+                log(`扣减错误: ${error.message}`, true);
+            }
+        }
+        
+        // 创建订单
+        async function testCreateOrder() {
+            if (!authToken) {
+                alert('请先登录！');
+                return;
+            }
+            
+            const amount = parseInt(document.getElementById('order-amount').value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/payment/create-order`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount })
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('order-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.code === 0) {
+                    document.getElementById('pay-order-number').value = data.data.orderNumber;
+                    resultDiv.innerHTML = `
+                        <strong>✅ 订单创建成功！</strong><br>
+                        订单号: ${data.data.orderNumber}<br>
+                        金额: ¥${data.data.amount}<br>
+                        Token 数量: ${data.data.tokenAmount}<br>
+                        测试支付: ${data.data.testUrl}
+                    `;
+                    log(`订单创建成功: ${data.data.orderNumber}, ¥${amount}`);
+                } else {
+                    resultDiv.innerHTML = `<strong>❌ 创建失败：</strong>${data.message}`;
+                    log(`订单创建失败: ${data.message}`, true);
+                }
+            } catch (error) {
+                log(`创建订单错误: ${error.message}`, true);
+            }
+        }
+        
+        // 模拟支付
+        async function testMockPay() {
+            const orderNumber = document.getElementById('pay-order-number').value;
+            
+            if (!orderNumber) {
+                alert('请输入订单号！');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/payment/mock-pay?orderNumber=${orderNumber}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('pay-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.code === 0) {
+                    resultDiv.innerHTML = `
+                        <strong>✅ 支付成功！</strong><br>
+                        订单号: ${data.data.orderNumber}<br>
+                        状态: ${data.data.status}<br>
+                        获得 Token: ${data.data.tokenAmount}
+                    `;
+                    log(`支付成功: ${orderNumber}, 获得Token: ${data.data.tokenAmount}`);
+                    
+                    // 刷新余额
+                    setTimeout(testGetBalance, 500);
+                } else {
+                    resultDiv.innerHTML = `<strong>❌ 支付失败：</strong>${data.message}`;
+                    log(`支付失败: ${data.message}`, true);
+                }
+            } catch (error) {
+                log(`支付错误: ${error.message}`, true);
+            }
+        }
+        
+        // 页面加载时检查服务器
+        window.onload = () => {
+            checkServer();
+            setInterval(checkServer, 10000); // 每10秒检查一次
+            log('页面加载完成');
+        };
+    </script>
+</body>
+</html>

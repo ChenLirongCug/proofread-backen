@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>登录测试</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input, button { margin: 5px; padding: 8px; }
+        #result { margin-top: 20px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h2>登录测试</h2>
+    <div>
+        <input type="text" id="account" placeholder="账号" value="testuser">
+        <input type="password" id="password" placeholder="密码" value="123456">
+        <button onclick="testLogin()">测试登录</button>
+    </div>
+    <div id="result"></div>
+
+    <script>
+        async function testLogin() {
+            const account = document.getElementById('account').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                resultDiv.textContent = '正在登录...';
+                
+                const response = await fetch('http://localhost:3001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account, password })
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.textContent = `状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`;
+                
+                if (data.code === 0) {
+                    resultDiv.textContent += '\n\n✅ 登录成功！\nToken: ' + data.data.token.substring(0, 50) + '...';
+                } else {
+                    resultDiv.textContent += '\n\n❌ 登录失败: ' + data.message;
+                }
+            } catch (error) {
+                resultDiv.textContent = '❌ 错误: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

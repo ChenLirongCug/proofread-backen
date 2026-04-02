@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: proofread-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-proofread_db}
+      POSTGRES_USER: ${DB_USER:-proofread_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=200"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - proofread-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-proofread_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: proofread-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-change_me_in_production}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - proofread-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # 应用程序
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: proofread-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      
+      # 数据库配置
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-proofread_db}
+      DB_USER: ${DB_USER:-proofread_user}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      DB_SSL: "false"
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      
+      # Redis 配置
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me_in_production}
+      REDIS_DB: 0
+      
+      # JWT 配置
+      JWT_SECRET: ${JWT_SECRET:-change_this_secret_key_in_production}
+      JWT_EXPIRATION: 7d
+      
+      # Token 业务规则
+      FREE_TOKEN_QUOTA: 10000
+      TOKEN_CONVERSION_RATE: 10000
+      TOKEN_PER_REQUEST: 1
+      LOGIN_FAILURE_THRESHOLD: 5
+      ACCOUNT_LOCK_DURATION_MINUTES: 15
+      PAYMENT_ORDER_EXPIRY_MINUTES: 15
+      
+      # 微信支付配置（需要手动填写）
+      WECHAT_MCHID: ${WECHAT_MCHID:-}
+      WECHAT_APPID: ${WECHAT_APPID:-}
+      WECHAT_API_KEY: ${WECHAT_API_KEY:-}
+      WECHAT_NOTIFY_URL: ${WECHAT_NOTIFY_URL:-https://your-domain.com/api/payment/wechat-notify}
+      
+      # 支付风控配置
+      PAYMENT_RECHARGE_INTERVAL_MINUTES: 5
+      MAX_RECHARGE_TIMES: 5
+      PAYMENT_AMOUNT_THRESHOLD: 10000
+      
+      # CORS 配置
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:8000}
+    
+    ports:
+      - "${PORT:-3001}:3001"
+    networks:
+      - proofread-network
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    
+    # 额外的安全选项
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+# 网络
+networks:
+  proofread-network:
+    driver: bridge
+
+# 数据卷
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

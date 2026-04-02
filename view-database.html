@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofRead数据库查看器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab:hover {
+            color: #667eea;
+            background: #f5f5f5;
+        }
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        tr:hover {
+            background: #f9f9f9;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-locked { background: #f8d7da; color: #721c24; }
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 ProofRead数据库查看器</h1>
+        <p class="subtitle">实时查看PostgreSQL数据库内容</p>
+        
+        <button class="refresh-btn" onclick="loadCurrentTable()">🔄 刷新数据</button>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('users')">👥 用户表</button>
+            <button class="tab" onclick="switchTab('token_logs')">💎 Token日志</button>
+            <button class="tab" onclick="switchTab('payment_orders')">💰 支付订单</button>
+            <button class="tab" onclick="switchTab('recharge_logs')">💳 充值记录</button>
+            <button class="tab" onclick="switchTab('login_logs')">🔐 登录日志</button>
+        </div>
+        
+        <div id="content">
+            <div class="loading">正在加载数据...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentTable = 'users';
+        const API_BASE = 'http://localhost:3001';
+
+        async function loadTable(tableName) {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading">正在加载数据...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/debug/${tableName}`);
+                const result = await response.json();
+                
+                if (result.code === 0 && result.data.length > 0) {
+                    renderTable(result.data, tableName);
+                } else {
+                    content.innerHTML = `<div class="error">暂无数据</div>`;
+                }
+            } catch (error) {
+                content.innerHTML = `<div class="error">❌ 加载失败: ${error.message}<br><br>请确保后端服务正在运行（http://localhost:3001）</div>`;
+            }
+        }
+
+        function renderTable(data, tableName) {
+            const content = document.getElementById('content');
+            
+            if (data.length === 0) {
+                content.innerHTML = '<div class="loading">暂无数据</div>';
+                return;
+            }
+
+            const headers = Object.keys(data[0]);
+            let html = '<div class="table-container"><table><thead><tr>';
+            
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            data.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    let value = row[header];
+                    
+                    // 格式化特殊字段
+                    if (header === 'account_status') {
+                        value = value === 1 
+                            ? '<span class="status-badge status-active">正常</span>'
+                            : '<span class="status-badge status-locked">锁定</span>';
+                    } else if (header === 'password_hash') {
+                        value = '••••••••';
+                    } else if (value === null) {
+                        value = '<span style="color:#999">null</span>';
+                    } else if (typeof value === 'object') {
+                        value = JSON.stringify(value);
+                    }
+                    
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            content.innerHTML = html;
+        }
+
+        function switchTab(tableName) {
+            currentTable = tableName;
+            
+            // 更新tab样式
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 加载数据
+            loadTable(tableName);
+        }
+
+        function loadCurrentTable() {
+            loadTable(currentTable);
+        }
+
+        // 初始加载
+        loadTable('users');
+    </script>
+</body>
+</html>
